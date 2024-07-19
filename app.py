@@ -1,4 +1,4 @@
-from mongolib import Model
+from mongolib import Model, StringField, NumberField
 
 ## Example usage
 class User(Model):
@@ -21,7 +21,7 @@ class Book(Model):
 if __name__ == '__main__':
     user = User(first_name="Hello", age=25)
     user.save()
-    # print(user)
+    
     
 
 
