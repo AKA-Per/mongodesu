@@ -110,6 +110,23 @@ class MongoAPI:
         let: Union[Mapping[str, Any], None] = None,
         comment: Union[Any, None] = None
         ) -> UpdateResult:
+        """Update the document based on the filter
+
+        Args:
+            filter (Mapping[str, Any]): The filter to add to the query
+            update (Union[Mapping[str, Any], _Pipeline]): the data to be updated in the document
+            upsert (bool, optional): If set to true then if no data is found then a new document will be created. Defaults to False.
+            bypass_document_validation (bool, optional): If set to true to disable the validation check on the data. Defaults to False.
+            collation (Union[_CollationIn, None], optional): _description_. Defaults to None.
+            array_filters (Union[Sequence[Mapping[str, Any]], None], optional): _description_. Defaults to None.
+            hint (Union[_IndexKeyHint, None], optional): _description_. Defaults to None.
+            session (Union[ClientSession, None], optional): _description_. Defaults to None.
+            let (Union[Mapping[str, Any], None], optional): _description_. Defaults to None.
+            comment (Union[Any, None], optional): _description_. Defaults to None.
+
+        Returns:
+            UpdateResult: _description_
+        """
         if bypass_document_validation is False:
             self.validate_on_docs(update)
         return self.collection.update_one(filter, update, upsert, bypass_document_validation, collation, array_filters, hint, session, let, comment)
