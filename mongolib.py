@@ -1,6 +1,7 @@
+from bson import ObjectId
 from pymongo import MongoClient
 from pymongo.results import InsertOneResult, InsertManyResult, UpdateResult, DeleteResult
-from pymongo.cursor import Cursor, CursorType
+from pymongo.cursor import Cursor
 from typing import Dict, Any, Iterable, Mapping, Optional, TypedDict, List, Union
 from datetime import date, datetime
 import inflect
@@ -8,7 +9,7 @@ from pymongo.bulk import RawBSONDocument
 from pymongo.client_session import ClientSession
 from pymongo.typings import _Pipeline, _CollationIn, Sequence
 from pymongo.collection import _IndexKeyHint, _DocumentType
-from pymongo.collection import abc
+from pymongo.collection import abc, Collection
 
 class AttributeDict(TypedDict):
     type: str
@@ -22,10 +23,17 @@ class MongoAPI:
     """A wraper for all the main crud operation and connection logic for the mongodb.
     """
     def __init__(self) -> None:
-        self.client = MongoClient("mongodb://localhost:27017")
-        self.db = self.client['flaskdb']
-        self.db.users.insert_many()
-        
+        # self.client = MongoClient("mongodb://localhost:27017")
+        # self.db = self.client['flaskdb']
+        # self.db.users.find_one()
+        pass
+    
+    @classmethod
+    def connect(self, host: str, database: str = ""):
+        self.client = MongoClient(host)
+        if database:
+            self.db = self.client.get_database(database)
+    
     def find(self, *args, **kwargs)-> Cursor:
         """Finds the list of documents from the collection set in the model
 
@@ -34,7 +42,7 @@ class MongoAPI:
         """
         return self.collection.find(*args, **kwargs)
     
-    def find_one(self, filter: Union[Any, None] = None, *args, **kwargs) -> Cursor:
+    def find_one(self, filter: Union[Any, None] = None, *args, **kwargs) -> Optional[_DocumentType]:
         """Finds one data from the mongodb based on the filter provided. If no filter provided then the first docs will be returned
 
         Args:
@@ -199,10 +207,21 @@ class Model(MongoAPI):
         for key, value in kwargs.items():
             setattr(self, key, value)
         # print(self.__class__.__dict__.items())
-        if self.collection_name is None or self.collection_name == '':
+        if (not hasattr(self, 'collection_name')) or self.collection_name is None or self.collection_name == '':
             self.collection_name = self.construct_model_name() # Here I want to get the inherited class name as the collection name.
             
-        self.collection = self.db[self.collection_name]
+        # self.collection = self.db[self.collection_name]
+        self.collection = Collection(self.db, self.collection_name)
+        # Create the collection in the mongo db with the field rules
+        items = self.__class__.__dict__.items()
+        for key, value in items:
+            if isinstance(value, Field):
+                ## Extract the rulw
+                kwargs = {}
+                if hasattr(value, 'unique') and getattr(value, 'unique') is True:
+                    kwargs['unique'] = getattr(value, 'unique')
+                if kwargs or (hasattr(value, 'index') and getattr(value, 'index') is True):
+                    self.collection.create_index(keys=key, **kwargs)
 
     def save(self):
         items = self.__class__.__dict__.items()
@@ -217,7 +236,7 @@ class Model(MongoAPI):
             
         if not data:
             raise ValueError('No value provided.')
-        self.insert_one(data=data)
+        return self.insert_one(document=data)
         
     
     def construct_model_name(self):
@@ -256,21 +275,12 @@ class Field:
         
 
 class StringField(Field):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, size: int = -1, required: bool = False, unique: bool = False, index: bool = False) -> None:
         super().__init__()
-        keys = ['size', 'required', 'unique']
-        passed_keys = kwargs.keys()
-        distinct = self.get_distinct_list(keys, passed_keys)
-        if not distinct:
-            pass
-        else:
-            # Some values are present in the list that are not allowed
-            message = ', '.join(distinct)
-            raise Exception(f"{message} are not allowed")
-        
-        self.size = kwargs.get('size', None)
-        self.required = kwargs.get('required', None)
-        self.unique = kwargs.get('unique', False)
+        self.size = size if size > 0 else None
+        self.required = required
+        self.unique = unique
+        self.index = index
         
     def validate(self, value, field_name):
         if self.required and not value:
@@ -284,18 +294,11 @@ class StringField(Field):
         
 ## Number field start
 class NumberField(Field):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, required: bool = False, unique: bool = False, index: bool = False) -> None:
         super().__init__()
-        keys = ['required']
-        passed_keys = kwargs.keys()
-        distinct = self.get_distinct_list(keys, passed_keys)
-        if not distinct:
-            pass
-        else:
-            message = ', '.join(distinct)
-            raise Exception(f"{message} are not allowed")
-        
-        self.required = kwargs.get('required', None)
+        self.required = required
+        self.unique = unique
+        self.index = index
         
     
     def validate(self, value, field_name):
@@ -307,17 +310,10 @@ class NumberField(Field):
     
 
 class ListField(Field):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, required: bool = False, item_type: Union[Any, None] = None) -> None:
         super().__init__()
-        keys = ['required', 'item_type']
-        passed_keys = kwargs.keys()
-        distinct = self.get_distinct_list(keys, passed_keys)
-        if distinct:
-            message = ', '.join(distinct)
-            raise Exception(f"{message} are not allowed")
-
-        self.required = kwargs.get('required', None)
-        self.item_type = kwargs.get('item_type', None)
+        self.required = required
+        self.item_type = item_type
 
     def validate(self, value, field_name):
         if self.required and not value:
@@ -333,16 +329,11 @@ class ListField(Field):
 
 
 class DateField(Field):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, required: bool = False, unique: bool = False, index: bool = False) -> None:
         super().__init__()
-        keys = ['required']
-        passed_keys = kwargs.keys()
-        distinct = self.get_distinct_list(keys, passed_keys)
-        if distinct:
-            message = ', '.join(distinct)
-            raise Exception(f"{message} are not allowed")
-
-        self.required = kwargs.get('required', None)
+        self.required = required
+        self.unique = unique
+        self.index = index
 
     def validate(self, value, field_name):
         if self.required and value is None:
@@ -353,20 +344,48 @@ class DateField(Field):
 
 
 class BooleanField(Field):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, required: bool = False, unique: bool = False, index: bool = False) -> None:
         super().__init__()
-        keys = ['required', 'unique']
-        passed_keys = kwargs.keys()
-        distinct = self.get_distinct_list(keys, passed_keys)
-        if distinct:
-            message = ', '.join(distinct)
-            raise Exception(f"{message} are not allowed")
-
-        self.required = kwargs.get('required', None)
-        self.unique = kwargs.get('unique', False)
+        self.required = required
+        self.unique = unique
+        self.index = index
 
     def validate(self, value, field_name):
         if self.required and value is None:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
         if not isinstance(value, bool):
             raise ValueError(f"{field_name} Boolean value expected.")
+
+
+
+class ForeignField(Field):
+    def __init__(self, model: Any,  parent_field: str = "_id", required: bool = False, default = None, existance_check: bool = False) -> None:
+        super().__init__()       
+        self.foreign_model = model
+        self.required = required
+        self.parent_field = parent_field
+        self.default = default
+        self.existance_check = existance_check
+        
+        
+    def validate(self, value, field_name):
+        if not issubclass(self.foreign_model, Model):
+            raise Exception("model should be a valid Model class.")
+        if self.required and not value:
+            raise ValueError(f"{field_name} marked as required. no value provided.")
+        if not isinstance(value, str) and not isinstance(value, ObjectId):
+            raise ValueError(f"{field_name} should be string or object id instance.")
+        if not ObjectId.is_valid(value):
+            raise ValueError(f"{field_name} is not a valid objectId")
+        
+        if self.existance_check is True:
+            ## Check if the value is in the model
+            model = self.foreign_model()
+            exist_data = model.find_one({"_id": value})
+            if not exist_data:
+                raise ModuleNotFoundError(f"{field_name} equivalant data not found.")
+            
+        
+    
+        
+        
