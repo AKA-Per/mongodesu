@@ -47,11 +47,29 @@ if __name__ == '__main__':
     # user = User(first_name="Babai", age=29, email="babai@mailinator.com", address=addressRes.inserted_id)
     # user.save()
     
-    user = User()
-    userData = user.find()
+    # user = User()
+    # userData = user.find()
     
-    for _user in userData:
-        print(_user.get('address'))
+    # for _user in userData:
+    #     print(_user.get('address'))
+    
+    user = User()
+    
+    userData = user.aggregate([
+        {
+            "$lookup": {
+                "from":"address",
+                "localField": "address",
+                "foreignField": "_id",
+                "as": "userAddress"
+                
+            }
+        }
+    ])
+    
+    while userData._has_next():
+        currUser = userData.next()
+        print(f"Name:=> {currUser.get('first_name')}, Address:=> {currUser.get('userAddress')[0].get('address_line1')}")
     
     # aaa = TestCls()
     
