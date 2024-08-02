@@ -2,6 +2,7 @@ from bson import ObjectId
 from pymongo import MongoClient
 from pymongo.results import InsertOneResult, InsertManyResult, UpdateResult, DeleteResult
 from pymongo.cursor import Cursor
+from pymongo.command_cursor import CommandCursor
 from typing import Dict, Any, Iterable, Mapping, Optional, TypedDict, List, Union
 from datetime import date, datetime
 import inflect
@@ -25,7 +26,7 @@ class MongoAPI:
     def __init__(self) -> None:
         # self.client = MongoClient("mongodb://localhost:27017")
         # self.db = self.client['flaskdb']
-        # self.db.users.find_one()
+        # self.db.users.aggregate()
         pass
     
     @classmethod
@@ -181,6 +182,15 @@ class MongoAPI:
     ) -> DeleteResult:
         
         return self.collection.delete_many(filter, collation, hint, session, let, comment)
+    
+    def aggregate(self,
+        pipeline: _Pipeline,
+        session: Optional[ClientSession] = None,
+        let: Optional[Mapping[str, Any]] = None,
+        comment: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> CommandCursor[_DocumentType]:
+        return self.collection.aggregate(pipeline, session, let, comment, **kwargs)
     
     def validate_on_docs(self, data):
         if isinstance(data, List):
