@@ -4,7 +4,11 @@ from bson import ObjectId
 
 ## Example usage
 
+mongo = MongoAPI()
+mongo.connect_one(host="mongodb://localhost:27017", database="flaskdb")
+
 class Address(Model):
+    connection = mongo
     collection_name = 'address'
     address_line1 = StringField(required=True)
     address_line2 = StringField(required=False)
@@ -15,6 +19,7 @@ class Address(Model):
 
 
 class User(Model):
+    connection = mongo
     collection_name = 'users'
     first_name = StringField(size=20, required=True)
     age = NumberField(required=True)
@@ -35,9 +40,10 @@ class TestCls(Field):
         address = Address()
 
 if __name__ == '__main__':
-    MongoAPI.connect("mongodb://localhost:27017", database="flaskdb")
+    # MongoAPI.connect(host="mongodb://localhost:27017", database="flaskdb")
     
-    # address = Address()
+    address = Address()
+    print(address.find())
     # address.address_line1 = "Barasat"
     # address.address_line2 = "Barasat"
     # address.city = "Kolkata"
