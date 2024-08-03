@@ -11,6 +11,7 @@ from pymongo.client_session import ClientSession
 from pymongo.typings import _Pipeline, _CollationIn, Sequence
 from pymongo.collection import _IndexKeyHint, _DocumentType
 from pymongo.collection import abc, Collection
+import logging
 
 class AttributeDict(TypedDict):
     type: str
@@ -23,18 +24,91 @@ class AttributeDict(TypedDict):
 class MongoAPI:
     """A wraper for all the main crud operation and connection logic for the mongodb.
     """
-    def __init__(self) -> None:
-        # self.client = MongoClient("mongodb://localhost:27017")
-        # self.db = self.client['flaskdb']
-        # self.db.users.aggregate()
-        pass
+    def __init__(self, 
+                 host: Union[str, None] = None, 
+                 port: Union[int, None] = 27017,
+                 uri: Union[str, None] = None,
+                 database: Union[str, None] = None) -> None:
+        logging.info("MongoAPI instance cretaed")
+        if host or uri:
+            self.connect_one(host=host, port=port, uri=uri, database=database)        
     
     @classmethod
-    def connect(self, host: str, database: str = ""):
-        self.client = MongoClient(host)
+    def connect(cls, 
+                host: Union[str, None] = None, 
+                port: Union[int, None] = 27017,
+                uri: Union[str, None] = None,
+                database: Union[str, None] = None):
+        logging.info("Calling the class method connect")
+        if uri:
+            logging.info(f"Connecting with the URI: {uri}")
+            cls.client = MongoClient(host=uri)
+
+        if host:
+            logging.info(f"Connecting with the HOST: {host} and PORT: {port}")
+            cls.client = MongoClient(host=host, port=port)
+        
         if database:
-            self.db = self.client.get_database(database)
+                cls.db = cls.client.get_database(database)
+        else:
+            cls.db = cls.client.get_database()
+            
+
     
+    def connect_one(self,
+                host: Union[str, None] = None, 
+                port: Union[int, None] = 27017,
+                uri: Union[str, None] = None,
+                database: Union[str, None] = None):
+        logging.info("Calling the instance method connect_one")
+        if uri:
+            logging.info(f"Connecting with the URI: {uri}")
+            self.client = MongoClient(host=uri)
+
+        if host:
+            logging.info(f"Connecting with the HOST: {host} and PORT: {port}")
+            self.client = MongoClient(host=host, port=port)
+        
+        if database:
+                self.db = self.client.get_database(database)
+        else:
+            self.db = self.client.get_database()
+            logging.info(self.db)              
+
+
+
+## NEW WAY TO DEFINE COLLECTION AND MODEL
+class Model(MongoAPI):
+    connection: Union[MongoAPI, None]
+    
+    def __init__(self, **kwargs) -> None:
+        if not hasattr(self, 'connection') or not self.connection:
+            if self.db is None:
+                super().__init__()
+        else:
+            self.db = self.connection.db
+            self.client = self.connection.client
+            
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        # print(self.__class__.__dict__.items())
+        if (not hasattr(self, 'collection_name')) or self.collection_name is None or self.collection_name == '':
+            self.collection_name = self.construct_model_name() # Here I want to get the inherited class name as the collection name.
+            
+        self.collection = Collection(self.db, self.collection_name)
+        logging.info(self.collection)
+        # Create the collection in the mongo db with the field rules
+        items = self.__class__.__dict__.items()
+        for key, value in items:
+            if isinstance(value, Field):
+                ## Extract the rulw
+                kwargs = {}
+                if hasattr(value, 'unique') and getattr(value, 'unique') is True:
+                    kwargs['unique'] = getattr(value, 'unique')
+                if kwargs or (hasattr(value, 'index') and getattr(value, 'index') is True):
+                    self.collection.create_index(keys=key, **kwargs)
+
+
     def find(self, *args, **kwargs)-> Cursor:
         """Finds the list of documents from the collection set in the model
 
@@ -208,30 +282,6 @@ class MongoAPI:
                     value.validate(getattr(self, key), key)
                 else:
                     value.validate(value=None, field_name=key)
-
-
-## NEW WAY TO DEFINE COLLECTION AND MODEL
-class Model(MongoAPI):
-    def __init__(self, **kwargs) -> None:
-        super().__init__()
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        # print(self.__class__.__dict__.items())
-        if (not hasattr(self, 'collection_name')) or self.collection_name is None or self.collection_name == '':
-            self.collection_name = self.construct_model_name() # Here I want to get the inherited class name as the collection name.
-            
-        # self.collection = self.db[self.collection_name]
-        self.collection = Collection(self.db, self.collection_name)
-        # Create the collection in the mongo db with the field rules
-        items = self.__class__.__dict__.items()
-        for key, value in items:
-            if isinstance(value, Field):
-                ## Extract the rulw
-                kwargs = {}
-                if hasattr(value, 'unique') and getattr(value, 'unique') is True:
-                    kwargs['unique'] = getattr(value, 'unique')
-                if kwargs or (hasattr(value, 'index') and getattr(value, 'index') is True):
-                    self.collection.create_index(keys=key, **kwargs)
 
     def save(self):
         items = self.__class__.__dict__.items()
