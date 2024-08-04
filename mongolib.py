@@ -159,9 +159,13 @@ class Model(MongoAPI):
         """
         if not isinstance(documents, abc.Iterable):
             raise ValueError('documents should be an iterable of raybson or documenttype')
+        
+        _data = documents
+        
         if bypass_document_validation is False:
-            self.validate_on_docs(documents)
-        return self.collection.insert_many(documents, ordered, bypass_document_validation, session, comment)
+            _data = self.validate_on_docs(documents)
+        
+        return self.collection.insert_many(_data, ordered, bypass_document_validation, session, comment)
     
     def insert_one(self, document: Union[Any, RawBSONDocument], bypass_document_validation: bool = False, 
                    session: Union[ClientSession, None] = None, comment: Union[Any, None] = None) -> InsertOneResult:
@@ -176,9 +180,11 @@ class Model(MongoAPI):
         Returns:
             InsertOneResult: The instance of the `InsertOneResult`
         """
+        _data = document
         if bypass_document_validation is False:
-            self.validate_on_docs(document)
-        return self.collection.insert_one(document, bypass_document_validation, session, comment)
+            _data = self.validate_on_docs(document)
+        
+        return self.collection.insert_one(_data, bypass_document_validation, session, comment)
     
     def update_one(
         self,
@@ -211,8 +217,9 @@ class Model(MongoAPI):
             UpdateResult: _description_
         """
         if bypass_document_validation is False:
-            self.validate_on_docs(update)
-        return self.collection.update_one(filter, update, upsert, bypass_document_validation, collation, array_filters, hint, session, let, comment)
+            _data = self.validate_on_docs(update)
+        
+        return self.collection.update_one(filter, _data, upsert, bypass_document_validation, collation, array_filters, hint, session, let, comment)
 
     def update_many(
         self,
@@ -227,10 +234,11 @@ class Model(MongoAPI):
         let: Optional[Mapping[str, Any]] = None,
         comment: Optional[Any] = None,
     ) -> UpdateResult:
+        _data = update
         if bypass_document_validation is False:
-            self.validate_on_docs(update)
+            _data = self.validate_on_docs(update)
             
-        return self.collection.update_many(filter, update, upsert, array_filters, bypass_document_validation, collation, hint, session, let, comment)
+        return self.collection.update_many(filter, _data, upsert, array_filters, bypass_document_validation, collation, hint, session, let, comment)
 
     
     def delete_one(
@@ -267,35 +275,54 @@ class Model(MongoAPI):
         return self.collection.aggregate(pipeline, session, let, comment, **kwargs)
     
     def validate_on_docs(self, data):
+        _data = list()
         if isinstance(data, List):
-            for doc in data:
-                self.validate_data(doc)
+            for index, doc in enumerate(data):
+                _data.append(self.validate_data(doc))
+            return _data
         else:
-            self.validate_data(data)
+            return self.validate_data(data)
     
     def validate_data(self, data):
         for _key, value in data.items():
             setattr(self, _key, value)
+            
+        _data = {}
         for key, value in self.__class__.__dict__.items():
             if isinstance(value, Field):
                 if hasattr(self, key):
                     value.validate(getattr(self, key), key)
+                    _data[key] = getattr(self, key)
                 else:
-                    value.validate(value=None, field_name=key)
-
+                    if hasattr(value, 'default'):
+                        dvalue = getattr(value, 'default')
+                        value.validate(value=dvalue, field_name=key)
+                        _data[key] = dvalue
+                    else:
+                        value.validate(value=None, field_name=key)
+        
+        return _data
+    
+    # End of the validate data function
+    
     def save(self):
         items = self.__class__.__dict__.items()
         data: Dict[str, Any] = {}
         for key, value in items:
             if isinstance(value, Field):
+                print(f"Checking {key} {hasattr(self, key)}")
                 if hasattr(self, key):
                     data[key] = getattr(self, key)
                 else:
-                    value.validate(None, key) # This will throw an error
-                    
-            
+                    if hasattr(value, 'default'):
+                        value.validate(getattr(value, 'default'), key)
+                        data[key] = getattr(value, 'default')
+                    else:
+                        value.validate(None, key) # This will throw an error
+        
         if not data:
             raise ValueError('No value provided.')
+        
         return self.insert_one(document=data)
         
     
@@ -335,14 +362,19 @@ class Field:
         
 
 class StringField(Field):
-    def __init__(self, size: int = -1, required: bool = False, unique: bool = False, index: bool = False) -> None:
+    def __init__(self, size: int = -1, required: bool = False, unique: bool = False, index: bool = False, default: Union[str, None] = None) -> None:
         super().__init__()
         self.size = size if size > 0 else None
         self.required = required
         self.unique = unique
         self.index = index
+        self.default = default
         
     def validate(self, value, field_name):
+        if not self.required and self.default:
+            # print(f"{field_name} value:= {self.default}")
+            setattr(self, field_name, self.default)
+            value = self.default # for subsequest error test
         if self.required and not value:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
         if not isinstance(value, str):
@@ -354,14 +386,18 @@ class StringField(Field):
         
 ## Number field start
 class NumberField(Field):
-    def __init__(self, required: bool = False, unique: bool = False, index: bool = False) -> None:
+    def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[int, float, None] = None) -> None:
         super().__init__()
         self.required = required
         self.unique = unique
         self.index = index
+        self.default = default
         
     
     def validate(self, value, field_name):
+        if not self.required and not (self.default is None):
+            setattr(self, field_name, self.default)
+            value = self.default
         if self.required and value is None:
             raise ValueError(f"Field {field_name} marked as required. But does not provide any value")
         if ((not isinstance(value, int)) and (not isinstance(value, float))):
@@ -370,10 +406,11 @@ class NumberField(Field):
     
 
 class ListField(Field):
-    def __init__(self, required: bool = False, item_type: Union[Any, None] = None) -> None:
+    def __init__(self, required: bool = False, item_type: Union[Any, None] = None, default: Union[list, None] = None) -> None:
         super().__init__()
         self.required = required
         self.item_type = item_type
+        self.default = default
 
     def validate(self, value, field_name):
         if self.required and not value:
@@ -389,11 +426,12 @@ class ListField(Field):
 
 
 class DateField(Field):
-    def __init__(self, required: bool = False, unique: bool = False, index: bool = False) -> None:
+    def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[date, datetime, None] = None) -> None:
         super().__init__()
         self.required = required
         self.unique = unique
         self.index = index
+        self.default = default
 
     def validate(self, value, field_name):
         if self.required and value is None:
@@ -404,11 +442,12 @@ class DateField(Field):
 
 
 class BooleanField(Field):
-    def __init__(self, required: bool = False, unique: bool = False, index: bool = False) -> None:
+    def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[bool, None] = None) -> None:
         super().__init__()
         self.required = required
         self.unique = unique
         self.index = index
+        self.default = default
 
     def validate(self, value, field_name):
         if self.required and value is None:
@@ -419,7 +458,7 @@ class BooleanField(Field):
 
 
 class ForeignField(Field):
-    def __init__(self, model: Any,  parent_field: str = "_id", required: bool = False, default = None, existance_check: bool = False) -> None:
+    def __init__(self, model: Model,  parent_field: str = "_id", required: bool = False, default: Union[str, ObjectId, None] = None, existance_check: bool = False) -> None:
         super().__init__()       
         self.foreign_model = model
         self.required = required
