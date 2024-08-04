@@ -413,6 +413,11 @@ class ListField(Field):
         self.default = default
 
     def validate(self, value, field_name):
+        if not self.required and self.default:
+            # print(f"{field_name} value:= {self.default}")
+            setattr(self, field_name, self.default)
+            value = self.default # for subsequest error test
+        
         if self.required and not value:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
         if not isinstance(value, list):
@@ -434,6 +439,11 @@ class DateField(Field):
         self.default = default
 
     def validate(self, value, field_name):
+        if not self.required and self.default:
+            # print(f"{field_name} value:= {self.default}")
+            setattr(self, field_name, self.default)
+            value = self.default # for subsequest error test
+        
         if self.required and value is None:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
         if not isinstance(value, (date, datetime)):
@@ -450,6 +460,11 @@ class BooleanField(Field):
         self.default = default
 
     def validate(self, value, field_name):
+        if not self.required and not (self.default is None):
+            # print(f"{field_name} value:= {self.default}")
+            setattr(self, field_name, self.default)
+            value = self.default # for subsequest error test
+        
         if self.required and value is None:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
         if not isinstance(value, bool):
