@@ -18,7 +18,7 @@ jobs:
             - name: Setup Python Environment
               uses: actions/setup-python@v4
               with:
-                python-version: '3.8.10'
+                python-version: '3.x'
 
             - name: Instal dependencies
               run: |
