@@ -107,7 +107,8 @@ class Model(MongoAPI):
                     kwargs['unique'] = getattr(value, 'unique')
                 if kwargs or (hasattr(value, 'index') and getattr(value, 'index') is True):
                     self.collection.create_index(keys=key, **kwargs)
-
+                    
+                    
 
     def find(self, *args, **kwargs)-> Cursor:
         """Finds the list of documents from the collection set in the model
@@ -273,6 +274,15 @@ class Model(MongoAPI):
         **kwargs: Any,
     ) -> CommandCursor[_DocumentType]:
         return self.collection.aggregate(pipeline, session, let, comment, **kwargs)
+    
+    def count_documents(
+        self, 
+        filter: Mapping[str, Any],
+        session: Optional[ClientSession] = None,
+        comment: Optional[Any] = None,
+        **kwargs: Any,
+        )-> int:
+        return self.collection.count_documents(filter=filter, session=session, comment=comment, **kwargs)
     
     def validate_on_docs(self, data):
         _data = list()

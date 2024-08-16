@@ -226,6 +226,13 @@ user = User()
 user.delete_one({"name": "John Doe"})
 ```
 
+### Count Documents
+
+```python
+user = User()
+print(user.count_documents({"name": "John Doe"}))
+```
+
 ### Using ForeignField
 
 ```python
