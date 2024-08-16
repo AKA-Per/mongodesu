@@ -14,6 +14,7 @@ class Address(Model):
     address_line2 = StringField(required=False)
     city = StringField(required=True)
     
+    
     def __str__(self) -> str:
         return f"{self.address_line1} {self.address_line2} {self.city}"
 
