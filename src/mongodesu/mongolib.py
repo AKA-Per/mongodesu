@@ -485,6 +485,12 @@ class ForeignField(Field):
     def validate(self, value, field_name):
         if not issubclass(self.foreign_model, Model):
             raise Exception("model should be a valid Model class.")
+        
+        if not self.required and not (self.default is None):
+            # print(f"{field_name} value:= {self.default}")
+            setattr(self, field_name, self.default)
+            value = self.default # for subsequest error test
+        
         if self.required and not value:
             raise ValueError(f"{field_name} marked as required. no value provided.")
         if not isinstance(value, str) and not isinstance(value, ObjectId):

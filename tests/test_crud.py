@@ -1,4 +1,4 @@
-from mongolib import Model, MongoAPI, StringField, NumberField, ForeignField, Field
+from mongodesu.mongolib import Model, MongoAPI, StringField, NumberField, ForeignField, Field
 from bson.json_util import loads, dumps
 from bson import ObjectId
 
