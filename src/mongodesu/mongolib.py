@@ -360,6 +360,7 @@ class Model(MongoAPI):
         # New fix for calling save on the existing instance will update the record 
         if hasattr(self, '_id'):
             filter = {'_id': getattr(self, '_id')}
+            # Calls to the update_on on the collection to keep the flow intact from class method
             updated = self.collection.update_one(filter, {"$set": data}, upsert=False, bypass_document_validation=False)
             return updated
         # Calling the insert_one on the collection itself not the classmethod to keep the reference from breaking
