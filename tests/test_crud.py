@@ -1,4 +1,10 @@
-from mongodesu.mongolib import Model, MongoAPI, StringField, NumberField, ForeignField, Field
+# import sys
+# import os
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+from src.mongodesu.mongolib import Model, MongoAPI
+from src.mongodesu.fields import Field
+from src.mongodesu.fields.types import StringField, NumberField, ForeignField
+
 from bson.json_util import loads, dumps
 from bson import ObjectId
 

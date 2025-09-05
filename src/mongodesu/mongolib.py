@@ -1,10 +1,8 @@
-from bson import ObjectId
 from pymongo import MongoClient
 from pymongo.results import InsertOneResult, InsertManyResult, UpdateResult, DeleteResult
 from pymongo.cursor import Cursor
 from pymongo.command_cursor import CommandCursor
 from typing import Dict, Any, Iterable, Mapping, Optional, TypedDict, List, Union
-from datetime import date, datetime
 import inflect
 from pymongo.bulk import RawBSONDocument
 from pymongo.client_session import ClientSession
@@ -12,6 +10,8 @@ from pymongo.typings import _Pipeline, _CollationIn, Sequence
 from pymongo.collection import _IndexKeyHint, _DocumentType
 from pymongo.collection import abc, Collection
 import logging
+
+from mongodesu.fields import Field 
 
 class AttributeDict(TypedDict):
     type: str
@@ -109,16 +109,25 @@ class Model(MongoAPI):
                     self.collection.create_index(keys=key, **kwargs)
                     
                     
-
-    def find(self, *args, **kwargs)-> Cursor:
+    @classmethod
+    def find(cls, *args, **kwargs):
         """Finds the list of documents from the collection set in the model
 
         Returns:
-            Cursor: The cursor object of the documents
+            # Cursor: The cursor object of the documents
+            List[_DocumentType]: The list of model instances
         """
-        return self.collection.find(*args, **kwargs)
+        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        cursor = cls.collection.find(*args, **kwargs)
+        resulted_list = []
+        for doc in cursor:
+            instance = cls(**doc)
+            resulted_list.append(instance)
+            
+        return resulted_list
     
-    def find_one(self, filter: Union[Any, None] = None, *args, **kwargs) -> Optional[_DocumentType]:
+    @classmethod
+    def find_one(cls, filter: Union[Any, None] = None, *args, **kwargs) -> Optional[_DocumentType]:
         """Finds one data from the mongodb based on the filter provided. If no filter provided then the first docs will be returned
 
         Args:
@@ -127,9 +136,14 @@ class Model(MongoAPI):
         Returns:
             Cursor: The cursor object of the document returned
         """
-        return self.collection.find_one(filter, *args, **kwargs)
+        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        data = cls.collection.find_one(filter, *args, **kwargs)
+        if data is None:
+            return data
+        return cls(**data) # Return the class instance
     
-    def insert_many(self, 
+    @classmethod
+    def insert_many(cls, 
                     documents: Iterable[Union[_DocumentType, RawBSONDocument]], 
                     ordered: bool = True,
                     bypass_document_validation: bool = False,
@@ -158,17 +172,19 @@ class Model(MongoAPI):
         Returns:
             InsertManyResult: An instance of the `InsertManyResult`
         """
+        _current_self = cls()
         if not isinstance(documents, abc.Iterable):
             raise ValueError('documents should be an iterable of raybson or documenttype')
         
         _data = documents
         
         if bypass_document_validation is False:
-            _data = self.validate_on_docs(documents)
+            _data = _current_self.validate_on_docs(documents)
         
-        return self.collection.insert_many(_data, ordered, bypass_document_validation, session, comment)
+        return _current_self.collection.insert_many(_data, ordered, bypass_document_validation, session, comment)
     
-    def insert_one(self, document: Union[Any, RawBSONDocument], bypass_document_validation: bool = False, 
+    @classmethod
+    def insert_one(cls, document: Union[Any, RawBSONDocument], bypass_document_validation: bool = False, 
                    session: Union[ClientSession, None] = None, comment: Union[Any, None] = None) -> InsertOneResult:
         """Insert a document in the mongodb
 
@@ -181,18 +197,19 @@ class Model(MongoAPI):
         Returns:
             InsertOneResult: The instance of the `InsertOneResult`
         """
+        _current_self = cls()
         _data = document
         if bypass_document_validation is False:
-            _data = self.validate_on_docs(document)
-        
-        return self.collection.insert_one(_data, bypass_document_validation, session, comment)
+            _data = _current_self.validate_on_docs(data=document)
+        return _current_self.collection.insert_one(_data, bypass_document_validation, session, comment)
     
+    @classmethod
     def update_one(
-        self,
+        cls,
         filter: Mapping[str, Any],
         update: Union[Mapping[str, Any], _Pipeline],
         upsert: bool = False,
-        bypass_document_validation: bool = False,
+        bypass_document_validation: bool = True, # This will be true as in case of update we will not provide all the fields
         collation: Union[_CollationIn, None] = None,
         array_filters: Union[Sequence[Mapping[str, Any]], None] = None,
         hint: Union[_IndexKeyHint, None] = None,
@@ -217,33 +234,35 @@ class Model(MongoAPI):
         Returns:
             UpdateResult: _description_
         """
+        _current_self = cls()
+        _data = update
         if bypass_document_validation is False:
-            _data = self.validate_on_docs(update)
-        
-        return self.collection.update_one(filter, _data, upsert, bypass_document_validation, collation, array_filters, hint, session, let, comment)
+            _data = _current_self.validate_on_docs(data=update)
+        return _current_self.collection.update_one(filter, _data, upsert, bypass_document_validation, collation, array_filters, hint, session, let, comment)
 
+    @classmethod
     def update_many(
-        self,
+        cls,
         filter: Mapping[str, Any],
         update: Union[Mapping[str, Any], _Pipeline],
         upsert: bool = False,
         array_filters: Optional[Sequence[Mapping[str, Any]]] = None,
-        bypass_document_validation: Optional[bool] = None,
+        bypass_document_validation: Optional[bool] = True,
         collation: Optional[_CollationIn] = None,
         hint: Optional[_IndexKeyHint] = None,
         session: Optional[ClientSession] = None,
         let: Optional[Mapping[str, Any]] = None,
         comment: Optional[Any] = None,
     ) -> UpdateResult:
+        _current_self = cls()
         _data = update
         if bypass_document_validation is False:
-            _data = self.validate_on_docs(update)
-            
-        return self.collection.update_many(filter, _data, upsert, array_filters, bypass_document_validation, collation, hint, session, let, comment)
+            _data = _current_self.validate_on_docs(update)
+        return _current_self.collection.update_many(filter, _data, upsert, array_filters, bypass_document_validation, collation, hint, session, let, comment)
 
-    
+    @classmethod
     def delete_one(
-        self,
+        cls,
         filter: Mapping[str, Any],
         collation: Optional[_CollationIn] = None,
         hint: Optional[_IndexKeyHint] = None,
@@ -251,11 +270,12 @@ class Model(MongoAPI):
         let: Optional[Mapping[str, Any]] = None,
         comment: Optional[Any] = None,
     ) -> DeleteResult:
-        
-        return self.collection.delete_one(filter, collation, hint, session, let, comment)
+        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        return cls.collection.delete_one(filter, collation, hint, session, let, comment)
     
+    @classmethod
     def delete_many(
-        self,
+        cls,
         filter: Mapping[str, Any],
         collation: Optional[_CollationIn] = None,
         hint: Optional[_IndexKeyHint] = None,
@@ -263,35 +283,39 @@ class Model(MongoAPI):
         let: Optional[Mapping[str, Any]] = None,
         comment: Optional[Any] = None,
     ) -> DeleteResult:
-        
-        return self.collection.delete_many(filter, collation, hint, session, let, comment)
+        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        return cls.collection.delete_many(filter, collation, hint, session, let, comment)
     
-    def aggregate(self,
+    @classmethod
+    def aggregate(cls,
         pipeline: _Pipeline,
         session: Optional[ClientSession] = None,
         let: Optional[Mapping[str, Any]] = None,
         comment: Optional[Any] = None,
         **kwargs: Any,
     ) -> CommandCursor[_DocumentType]:
-        return self.collection.aggregate(pipeline, session, let, comment, **kwargs)
+        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        return cls.collection.aggregate(pipeline, session, let, comment, **kwargs)
     
+    @classmethod
     def count_documents(
-        self, 
+        cls, 
         filter: Mapping[str, Any],
         session: Optional[ClientSession] = None,
         comment: Optional[Any] = None,
         **kwargs: Any,
         )-> int:
-        return self.collection.count_documents(filter=filter, session=session, comment=comment, **kwargs)
+        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        return cls.collection.count_documents(filter=filter, session=session, comment=comment, **kwargs)
     
     def validate_on_docs(self, data):
         _data = list()
         if isinstance(data, List):
             for index, doc in enumerate(data):
-                _data.append(self.validate_data(doc))
+                _data.append(self.validate_data(data=doc))
             return _data
         else:
-            return self.validate_data(data)
+            return self.validate_data(data=data)
     
     def validate_data(self, data):
         for _key, value in data.items():
@@ -320,7 +344,7 @@ class Model(MongoAPI):
         data: Dict[str, Any] = {}
         for key, value in items:
             if isinstance(value, Field):
-                print(f"Checking {key} {hasattr(self, key)}")
+                # print(f"Checking {key} {hasattr(self, key)}")
                 if hasattr(self, key):
                     data[key] = getattr(self, key)
                 else:
@@ -333,7 +357,9 @@ class Model(MongoAPI):
         if not data:
             raise ValueError('No value provided.')
         
-        return self.insert_one(document=data)
+        inserted = self.insert_one(document=data)
+        setattr(self, '_id', inserted.inserted_id)
+        return inserted # This will return the mongo inserted result instance. But after updating the current instance
         
     
     def construct_model_name(self):
@@ -342,180 +368,5 @@ class Model(MongoAPI):
         return inflector.plural(class_name.lower())
     
 
-
-class Field:
-    
-    def __init__(self) -> None:
-        self.value = None
-
-    def __set_name__(self, owner, name):
-        self.private_name = '_' + name
-        self.name = name
-
-    def __get__(self, obj, objtype=None):
-        return getattr(obj, self.private_name)
-
-    def __set__(self, obj, value):
-        self.validate(value, self.name)
-        setattr(obj, self.private_name, value)
-
-    def validate(self, value, field_name):
-        raise NotImplementedError("Subclasses must implement the validate method.")
-    
-    def get_distinct_list(self, list1, list2):
-        set1 = set(list1)
-        set2 = set(list2)
-        
-        distinct_elements = set2 - set1
-        return list(distinct_elements)
-    
-        
-
-class StringField(Field):
-    def __init__(self, size: int = -1, required: bool = False, unique: bool = False, index: bool = False, default: Union[str, None] = None) -> None:
-        super().__init__()
-        self.size = size if size > 0 else None
-        self.required = required
-        self.unique = unique
-        self.index = index
-        self.default = default
-        
-    def validate(self, value, field_name):
-        if not self.required and self.default:
-            # print(f"{field_name} value:= {self.default}")
-            setattr(self, field_name, self.default)
-            value = self.default # for subsequest error test
-        if self.required and not value:
-            raise ValueError(f"Field {field_name} marked as required and no value provided.")
-        if not isinstance(value, str):
-            raise ValueError(f"Field {field_name} -> String is expected.")
-        if self.size and len(value) > self.size:
-            raise ValueError(f"{field_name} size exceeded, max size {self.size}. Provided {len(value)}")
-        
-    
-        
-## Number field start
-class NumberField(Field):
-    def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[int, float, None] = None) -> None:
-        super().__init__()
-        self.required = required
-        self.unique = unique
-        self.index = index
-        self.default = default
-        
-    
-    def validate(self, value, field_name):
-        if not self.required and not (self.default is None):
-            setattr(self, field_name, self.default)
-            value = self.default
-        if self.required and value is None:
-            raise ValueError(f"Field {field_name} marked as required. But does not provide any value")
-        if ((not isinstance(value, int)) and (not isinstance(value, float))):
-            raise ValueError(f"Field {field_name} Only number value accepted. integer and Float")
-    
-    
-
-class ListField(Field):
-    def __init__(self, required: bool = False, item_type: Union[Any, None] = None, default: Union[list, None] = None) -> None:
-        super().__init__()
-        self.required = required
-        self.item_type = item_type
-        self.default = default
-
-    def validate(self, value, field_name):
-        if not self.required and self.default:
-            # print(f"{field_name} value:= {self.default}")
-            setattr(self, field_name, self.default)
-            value = self.default # for subsequest error test
-        
-        if self.required and not value:
-            raise ValueError(f"Field {field_name} marked as required and no value provided.")
-        if not isinstance(value, list):
-            raise ValueError(f"{field_name} List value expected.")
-        if self.item_type:
-            for item in value:
-                if not isinstance(item, self.item_type):
-                    raise ValueError(f"{field_name} List items must be of type {self.item_type.__name__}.")
-
-
-
-
-class DateField(Field):
-    def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[date, datetime, None] = None) -> None:
-        super().__init__()
-        self.required = required
-        self.unique = unique
-        self.index = index
-        self.default = default
-
-    def validate(self, value, field_name):
-        if not self.required and self.default:
-            # print(f"{field_name} value:= {self.default}")
-            setattr(self, field_name, self.default)
-            value = self.default # for subsequest error test
-        
-        if self.required and value is None:
-            raise ValueError(f"Field {field_name} marked as required and no value provided.")
-        if not isinstance(value, (date, datetime)):
-            raise ValueError(f"{field_name} Date or datetime value expected.")
-
-
-
-class BooleanField(Field):
-    def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[bool, None] = None) -> None:
-        super().__init__()
-        self.required = required
-        self.unique = unique
-        self.index = index
-        self.default = default
-
-    def validate(self, value, field_name):
-        if not self.required and not (self.default is None):
-            # print(f"{field_name} value:= {self.default}")
-            setattr(self, field_name, self.default)
-            value = self.default # for subsequest error test
-        
-        if self.required and value is None:
-            raise ValueError(f"Field {field_name} marked as required and no value provided.")
-        if not isinstance(value, bool):
-            raise ValueError(f"{field_name} Boolean value expected.")
-
-
-
-class ForeignField(Field):
-    def __init__(self, model: Model,  parent_field: str = "_id", required: bool = False, default: Union[str, ObjectId, None] = None, existance_check: bool = False) -> None:
-        super().__init__()       
-        self.foreign_model = model
-        self.required = required
-        self.parent_field = parent_field
-        self.default = default
-        self.existance_check = existance_check
-        
-        
-    def validate(self, value, field_name):
-        if not issubclass(self.foreign_model, Model):
-            raise Exception("model should be a valid Model class.")
-        
-        if not self.required and not (self.default is None):
-            # print(f"{field_name} value:= {self.default}")
-            setattr(self, field_name, self.default)
-            value = self.default # for subsequest error test
-        
-        if self.required and not value:
-            raise ValueError(f"{field_name} marked as required. no value provided.")
-        if not isinstance(value, str) and not isinstance(value, ObjectId):
-            raise ValueError(f"{field_name} should be string or object id instance.")
-        if not ObjectId.is_valid(value):
-            raise ValueError(f"{field_name} is not a valid objectId")
-        
-        if self.existance_check is True:
-            ## Check if the value is in the model
-            model = self.foreign_model()
-            exist_data = model.find_one({"_id": value})
-            if not exist_data:
-                raise ModuleNotFoundError(f"{field_name} equivalant data not found.")
-            
-        
-    
         
         
