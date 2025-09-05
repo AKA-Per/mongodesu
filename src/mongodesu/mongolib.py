@@ -357,7 +357,13 @@ class Model(MongoAPI):
         if not data:
             raise ValueError('No value provided.')
         
-        inserted = self.insert_one(document=data)
+        # New fix for calling save on the existing instance will update the record 
+        if hasattr(self, '_id'):
+            filter = {'_id': getattr(self, '_id')}
+            updated = self.collection.update_one(filter, {"$set": data}, upsert=False, bypass_document_validation=False)
+            return updated
+        # Calling the insert_one on the collection itself not the classmethod to keep the reference from breaking
+        inserted = self.collection.insert_one(document=data)
         setattr(self, '_id', inserted.inserted_id)
         return inserted # This will return the mongo inserted result instance. But after updating the current instance
         

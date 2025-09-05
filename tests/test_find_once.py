@@ -16,6 +16,12 @@ if __name__ == '__main__':
     if res:
         print(res.name, res.age)
         res.age = 35
-        res.name = "AkaUser"
+        res.name = "AkaUser2"
         new_res = res.save()
         print(new_res)
+    user = User()
+    user.name = "Another User"
+    user.age = 20
+    # This should create a new user
+    new_user_res = user.save()
+    print(new_user_res)
