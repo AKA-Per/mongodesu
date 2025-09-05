@@ -1,4 +1,5 @@
-from mongodesu.mongolib import MongoAPI, Model, StringField, NumberField
+from src.mongodesu.mongolib import MongoAPI, Model
+from src.mongodesu.fields import StringField, NumberField
 
 if __name__ == '__main__':
     MongoAPI.connect(uri="mongodb://localhost:27017/python-db-test")

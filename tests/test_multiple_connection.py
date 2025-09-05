@@ -1,5 +1,6 @@
 from bson.json_util import loads, dumps
-from mongodesu.mongolib import MongoAPI, Model, StringField, NumberField, BooleanField
+from src.mongodesu.mongolib import MongoAPI, Model
+from src.mongodesu.fields import StringField, NumberField, BooleanField
 import logging
 
 logging.basicConfig(level=logging.INFO)

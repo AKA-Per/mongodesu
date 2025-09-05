@@ -1,4 +1,10 @@
-from mongodesu.mongolib import Model, MongoAPI, StringField, NumberField, ForeignField, Field
+# import sys
+# import os
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+from src.mongodesu.mongolib import Model, MongoAPI
+from src.mongodesu.fields import Field
+from src.mongodesu.fields.types import StringField, NumberField, ForeignField
+
 from bson.json_util import loads, dumps
 from bson import ObjectId
 
@@ -13,6 +19,7 @@ class Address(Model):
     address_line1 = StringField(required=True)
     address_line2 = StringField(required=False)
     city = StringField(required=True)
+    
     
     def __str__(self) -> str:
         return f"{self.address_line1} {self.address_line2} {self.city}"
