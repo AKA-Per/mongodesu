@@ -79,8 +79,8 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
     - name: Create tag
       run: |
-        git config user.name github-actions
-        git config user.email github-actions@github.com
+        git config user.name anikSD
+        git config user.email anikd141@gmail.com
         if git rev-parse "v${{ needs.build.outputs.version }}" >/dev/null 2>&1; then
             echo "Tag already exists, skipping."
         else
@@ -90,7 +90,7 @@ jobs:
     - name: Create GitHub release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.PERSONAL_TOKEN }}
       with:
         tag_name: v${{ needs.build.outputs.version }}
         release_name: Release v${{ needs.build.outputs.version }}
