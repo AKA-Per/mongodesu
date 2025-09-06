@@ -23,8 +23,8 @@ jobs:
       id: get_version
       run: >-
           VERSION=$(python3 setup.py --version)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Current Package Version is $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          
     - name: Check if version already exist
       id: check_version
       run: >-
