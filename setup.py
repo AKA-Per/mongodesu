@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mongodesu",
-    version="1.1.1",
+    version="1.1.2",
     description="A mongodb ODM dependant on pymongo with the extensive of model creation and validation and relational model machanism. This helps you create the ODM in the python program with the similarities of an SQL class model.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
