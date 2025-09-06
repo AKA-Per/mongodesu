@@ -4,13 +4,15 @@ on:
     push:
         branches:
             - master
+permissions:
+  contents: write
 jobs:
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
     outputs:
         exists: ${{ steps.check_version.outputs.exists }}
-        version: ${{ env.VERSION }}
+        version: ${{ steps.get_version.outputs.version }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -77,8 +79,12 @@ jobs:
       run: |
         git config user.name github-actions
         git config user.email github-actions@github.com
-        git tag v${{ needs.build.outputs.version }}
-        git push origin v${{ needs.build.outputs.version }}
+        if git rev-parse "v${{ needs.build.outputs.version }}" >/dev/null 2>&1; then
+            echo "Tag already exists, skipping."
+        else
+            git tag v${{ needs.build.outputs.version }}
+            git push origin v${{ needs.build.outputs.version }}
+        fi
     - name: Create GitHub release
       uses: actions/create-release@v1
       env:
