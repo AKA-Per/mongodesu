@@ -62,7 +62,11 @@ jobs:
       url: https://pypi.org/p/mongodesu  # Replace <package-name> with your PyPI project name
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
-
+  create-publish-tag:
+    name: Create Tag and Release on GitHub
+    needs: build
+    if: needs.build.outputs.exists == 'false'
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
