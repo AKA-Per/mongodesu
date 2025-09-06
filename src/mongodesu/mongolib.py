@@ -2,7 +2,7 @@ from pymongo import MongoClient
 from pymongo.results import InsertOneResult, InsertManyResult, UpdateResult, DeleteResult
 from pymongo.cursor import Cursor
 from pymongo.command_cursor import CommandCursor
-from typing import Dict, Any, Iterable, Mapping, Optional, TypedDict, List, Union
+from typing import Dict, Any, Iterable, Mapping, Optional, TypedDict, List, Union, Type, TypeVar
 import inflect
 from pymongo.bulk import RawBSONDocument
 from pymongo.client_session import ClientSession
@@ -12,6 +12,7 @@ from pymongo.collection import abc, Collection
 import logging
 
 from mongodesu.fields import Field 
+from mongodesu.serializable.serializable import Serializable
 
 class AttributeDict(TypedDict):
     type: str
@@ -20,6 +21,7 @@ class AttributeDict(TypedDict):
     unique: bool
     default: Any
 
+M = TypeVar('M', bound='Model')
 
 class MongoAPI:
     """A wraper for all the main crud operation and connection logic for the mongodb.
@@ -78,7 +80,7 @@ class MongoAPI:
 
 
 ## NEW WAY TO DEFINE COLLECTION AND MODEL
-class Model(MongoAPI):
+class Model(MongoAPI, Serializable):
     connection: Union[MongoAPI, None]
     
     def __init__(self, **kwargs) -> None:
@@ -110,7 +112,7 @@ class Model(MongoAPI):
                     
                     
     @classmethod
-    def find(cls, *args, **kwargs):
+    def find(cls: Type[M], *args, **kwargs) -> List[M]:
         """Finds the list of documents from the collection set in the model
 
         Returns:
@@ -119,7 +121,7 @@ class Model(MongoAPI):
         """
         cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
         cursor = cls.collection.find(*args, **kwargs)
-        resulted_list = []
+        resulted_list: List[M] = []
         for doc in cursor:
             instance = cls(**doc)
             resulted_list.append(instance)
@@ -127,7 +129,7 @@ class Model(MongoAPI):
         return resulted_list
     
     @classmethod
-    def find_one(cls, filter: Union[Any, None] = None, *args, **kwargs) -> Optional[_DocumentType]:
+    def find_one(cls: Type[M], filter: Union[Any, None] = None, *args, **kwargs) -> Optional[M]:
         """Finds one data from the mongodb based on the filter provided. If no filter provided then the first docs will be returned
 
         Args:
@@ -143,7 +145,7 @@ class Model(MongoAPI):
         return cls(**data) # Return the class instance
     
     @classmethod
-    def insert_many(cls, 
+    def insert_many(cls: Type[M], 
                     documents: Iterable[Union[_DocumentType, RawBSONDocument]], 
                     ordered: bool = True,
                     bypass_document_validation: bool = False,
@@ -184,7 +186,7 @@ class Model(MongoAPI):
         return _current_self.collection.insert_many(_data, ordered, bypass_document_validation, session, comment)
     
     @classmethod
-    def insert_one(cls, document: Union[Any, RawBSONDocument], bypass_document_validation: bool = False, 
+    def insert_one(cls: Type[M], document: Union[Any, RawBSONDocument], bypass_document_validation: bool = False, 
                    session: Union[ClientSession, None] = None, comment: Union[Any, None] = None) -> InsertOneResult:
         """Insert a document in the mongodb
 
@@ -205,7 +207,7 @@ class Model(MongoAPI):
     
     @classmethod
     def update_one(
-        cls,
+        cls: Type[M],
         filter: Mapping[str, Any],
         update: Union[Mapping[str, Any], _Pipeline],
         upsert: bool = False,
@@ -242,7 +244,7 @@ class Model(MongoAPI):
 
     @classmethod
     def update_many(
-        cls,
+        cls: Type[M],
         filter: Mapping[str, Any],
         update: Union[Mapping[str, Any], _Pipeline],
         upsert: bool = False,
@@ -262,7 +264,7 @@ class Model(MongoAPI):
 
     @classmethod
     def delete_one(
-        cls,
+        cls: Type[M],
         filter: Mapping[str, Any],
         collation: Optional[_CollationIn] = None,
         hint: Optional[_IndexKeyHint] = None,
@@ -275,7 +277,7 @@ class Model(MongoAPI):
     
     @classmethod
     def delete_many(
-        cls,
+        cls: Type[M],
         filter: Mapping[str, Any],
         collation: Optional[_CollationIn] = None,
         hint: Optional[_IndexKeyHint] = None,
@@ -287,7 +289,7 @@ class Model(MongoAPI):
         return cls.collection.delete_many(filter, collation, hint, session, let, comment)
     
     @classmethod
-    def aggregate(cls,
+    def aggregate(cls: Type[M],
         pipeline: _Pipeline,
         session: Optional[ClientSession] = None,
         let: Optional[Mapping[str, Any]] = None,
@@ -299,7 +301,7 @@ class Model(MongoAPI):
     
     @classmethod
     def count_documents(
-        cls, 
+        cls: Type[M], 
         filter: Mapping[str, Any],
         session: Optional[ClientSession] = None,
         comment: Optional[Any] = None,
@@ -373,6 +375,26 @@ class Model(MongoAPI):
         inflector = inflect.engine()
         class_name = self.__class__.__name__
         return inflector.plural(class_name.lower())
+    
+    # Feature Implementation toDict
+    def to_dict(self):
+        data = {}
+        for key, value in self.__class__.__dict__.items():
+            if isinstance(value, Field):
+                if hasattr(self, key):
+                    data[key] = getattr(self, key)
+                else:
+                    if hasattr(value, 'default'):
+                        data[key] = getattr(value, 'default')
+                    else:
+                        data[key] = None
+        if hasattr(self, '_id'):
+            data['_id'] = getattr(self, '_id')
+        return data
+    
+    def __str__(self):
+        return super().__str__() + " " + str(self.to_dict())
+    
     
 
         

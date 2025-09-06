@@ -1,11 +1,11 @@
 
 from mongodesu.mongolib import Model
-from typing import Any, Union
+from typing import Any, Union, List
 from datetime import date, datetime
 from bson import ObjectId
 from . import Field
 
-class StringField(Field):
+class StringField(Field[str]):
     def __init__(self, size: int = -1, required: bool = False, unique: bool = False, index: bool = False, default: Union[str, None] = None) -> None:
         super().__init__()
         self.size = size if size > 0 else None
@@ -14,11 +14,14 @@ class StringField(Field):
         self.index = index
         self.default = default
         
-    def validate(self, value, field_name):
+    def validate(self, value, field_name: str):
         if not self.required and self.default:
             # print(f"{field_name} value:= {self.default}")
             setattr(self, field_name, self.default)
             value = self.default # for subsequest error test
+        if self.required and value is None and (self.default is not None):
+            setattr(self, field_name, self.default)
+            value = self.default
         if self.required and not value:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
         if not isinstance(value, str):
@@ -29,7 +32,7 @@ class StringField(Field):
     
         
 ## Number field start
-class NumberField(Field):
+class NumberField(Field[Union[int, float]]):
     def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[int, float, None] = None) -> None:
         super().__init__()
         self.required = required
@@ -49,8 +52,8 @@ class NumberField(Field):
     
     
 
-class ListField(Field):
-    def __init__(self, required: bool = False, item_type: Union[Any, None] = None, default: Union[list, None] = None) -> None:
+class ListField(Field[List[Any]]):
+    def __init__(self, required: bool = False, item_type: Union[Any, None] = None, default: Union[List[Any], None] = None) -> None:
         super().__init__()
         self.required = required
         self.item_type = item_type
@@ -95,7 +98,7 @@ class DateField(Field):
 
 
 
-class BooleanField(Field):
+class BooleanField(Field[bool]):
     def __init__(self, required: bool = False, unique: bool = False, index: bool = False, default: Union[bool, None] = None) -> None:
         super().__init__()
         self.required = required
@@ -116,7 +119,7 @@ class BooleanField(Field):
 
 
 
-class ForeignField(Field):
+class ForeignField(Field[Union[str, ObjectId]]):
     def __init__(self, model: Model,  parent_field: str = "_id", required: bool = False, default: Union[str, ObjectId, None] = None, existance_check: bool = False) -> None:
         super().__init__()       
         self.foreign_model = model
