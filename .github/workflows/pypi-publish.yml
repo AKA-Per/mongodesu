@@ -62,7 +62,7 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 
     steps:
-    # - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     # - name: Get version from setup.py
     #   id: get_version
     #   run: echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
