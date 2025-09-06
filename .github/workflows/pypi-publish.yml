@@ -97,8 +97,9 @@ jobs:
         fi
     - name: Create GitHub release
       uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
       with:
-        token: ${{ secrets.PERSONAL_TOKEN }}
         tag_name: v${{ steps.get_version.outputs.version }}
         release_name: Release v${{ steps.get_version.outputs.version }}
         draft: false
