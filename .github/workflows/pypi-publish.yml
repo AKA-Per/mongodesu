@@ -89,20 +89,20 @@ jobs:
         git config user.name anikSD
         git config user.email anikd141@gmail.com
         git remote set-url origin https://x-access-token:${{ secrets.PERSONAL_TOKEN }}@github.com/${{ github.repository }}.git
-        if git rev-parse "v${{ needs.build.outputs.version }}" >/dev/null 2>&1; then
+        if git rev-parse "v${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
             echo "Tag already exists, skipping."
         else
-            git tag v${{ needs.build.outputs.version }}
-            git push origin v${{ needs.build.outputs.version }}
+            git tag v${{ steps.get_version.outputs.version }}
+            git push origin v${{ steps.get_version.outputs.version }}
         fi
     - name: Create GitHub release
       uses: actions/create-release@v1
       env:
         token: ${{ secrets.PERSONAL_TOKEN }}
       with:
-        tag_name: v${{ needs.build.outputs.version }}
-        release_name: Release v${{ needs.build.outputs.version }}
+        tag_name: v${{ steps.get_version.outputs.version }}
+        release_name: Release v${{ steps.get_version.outputs.version }}
         draft: false
         prerelease: false
         body: |
-          Automatically generated release for version v${{ needs.build.outputs.version }}
+          Automatically generated release for version v${{ steps.get_version.outputs.version }}
