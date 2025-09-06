@@ -80,7 +80,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        persist-credentials: true
+        persist-credentials: false
     - name: Get version from setup.py
       id: get_version
       run: echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
@@ -88,6 +88,7 @@ jobs:
       run: |
         git config user.name anikSD
         git config user.email anikd141@gmail.com
+        git remote set-url origin https://x-access-token:${{ secrets.PERSONAL_TOKEN }}@github.com/${{ github.repository }}.git
         if git rev-parse "v${{ needs.build.outputs.version }}" >/dev/null 2>&1; then
             echo "Tag already exists, skipping."
         else
