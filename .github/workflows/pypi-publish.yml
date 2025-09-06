@@ -74,7 +74,7 @@ jobs:
 
   create-publish-tag:
     name: Create Tag and Release on GitHub
-    needs: build
+    needs: publish-to-pypi
     if: needs.build.outputs.exists == 'false'
     runs-on: ubuntu-latest
     steps:
@@ -84,13 +84,6 @@ jobs:
     - name: Get version from setup.py
       id: get_version
       run: echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-    - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
     - name: Create tag
       run: |
         git config user.name anikSD
