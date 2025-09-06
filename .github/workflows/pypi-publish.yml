@@ -65,6 +65,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: true
     # - name: Get version from setup.py
     #   id: get_version
     #   run: echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
