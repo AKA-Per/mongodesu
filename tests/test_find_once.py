@@ -1,5 +1,5 @@
-from mongodesu.mongolib import Model, MongoAPI
-from mongodesu.fields.types import StringField, NumberField, ForeignField, ObjectId
+from mongodesu import Model, MongoAPI
+from mongodesu.fields import StringField, NumberField, ForeignField, ObjectId
 
 MongoAPI.connect(uri="mongodb://localhost:27017", database="test_mongodesu")
 

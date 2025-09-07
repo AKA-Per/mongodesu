@@ -1,9 +1,12 @@
 
-from mongodesu.mongolib import Model
-from typing import Any, Union, List
+import warnings
+from mongodesu.fields.base import Field
+from typing import Any, Union, List, TYPE_CHECKING
 from datetime import date, datetime
 from bson import ObjectId
-from . import Field
+
+if TYPE_CHECKING:
+    from mongodesu.mongolib import Model
 
 class StringField(Field[str]):
     def __init__(self, size: int = -1, required: bool = False, unique: bool = False, index: bool = False, default: Union[str, None] = None) -> None:
@@ -120,7 +123,7 @@ class BooleanField(Field[bool]):
 
 
 class ForeignField(Field[Union[str, ObjectId]]):
-    def __init__(self, model: Model,  parent_field: str = "_id", required: bool = False, default: Union[str, ObjectId, None] = None, existance_check: bool = False) -> None:
+    def __init__(self, model: "Model",  parent_field: str = "_id", required: bool = False, default: Union[str, ObjectId, None] = None, existance_check: bool = False) -> None:
         super().__init__()       
         self.foreign_model = model
         self.required = required
@@ -130,6 +133,8 @@ class ForeignField(Field[Union[str, ObjectId]]):
         
         
     def validate(self, value, field_name):
+        from mongodesu.mongolib import Model
+         ## Check if the model is a valid Model class
         if not issubclass(self.foreign_model, Model):
             raise Exception("model should be a valid Model class.")
         
@@ -152,4 +157,12 @@ class ForeignField(Field[Union[str, ObjectId]]):
             if not exist_data:
                 raise ModuleNotFoundError(f"{field_name} equivalant data not found.")
             
- 
+
+
+# Warn the user that this path is deprecated
+warnings.warn(
+    "Importing from mongodesu.fields.types is deprecated; "
+    "please use 'from mongodesu.fields import ...' instead.",
+    DeprecationWarning,
+    stacklevel=2
+)

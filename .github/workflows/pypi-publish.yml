@@ -37,19 +37,26 @@ jobs:
             fi
       env:
         VERSION: ${{ env.VERSION }}
-    - name: Install pypa/build
+    - name: Upgrade pip, setuptools, wheel
+      run: python3 -m pip install --upgrade pip setuptools wheel
+
+    - name: Install pypa/build & twine
       run: >-
         python3 -m
-        pip install
-        build
-        --user
+        pip install --upgrade build twine
+        
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
+
+    - name: Verify packages
+      run: python3 -m twine check dist/*
+
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
         name: python-package-distributions
         path: dist/
+    
 
   publish-to-pypi:
     name: >-
