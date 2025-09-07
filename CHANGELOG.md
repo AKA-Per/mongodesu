@@ -16,3 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Bug in ```save()``` method when calling on existing record creates duplicate entry.
 
+
+## [2.0.0] - 2.25-09-07
+### Fixed
+- Major Bug Fix - Serialization imports error fixed.
+
+### Major Chamged
+- Imports for ```types```, ```Model```, changed for end user.
+- All imports are converted to module import with ```__init__```

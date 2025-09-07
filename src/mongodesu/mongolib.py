@@ -11,8 +11,8 @@ from pymongo.collection import _IndexKeyHint, _DocumentType
 from pymongo.collection import abc, Collection
 import logging
 
-from mongodesu.fields import Field 
-from mongodesu.serializable.serializable import Serializable
+from mongodesu.fields.base import Field 
+from mongodesu.serializable import Serializable
 
 class AttributeDict(TypedDict):
     type: str

@@ -1,3 +1,27 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "mongodesu"
+version = "2.0.0"
+description = "A mongodb ODM dependant on pymongo with extensive model creation, validation, and relational model mechanism."
+readme = "README.md"
+authors = [
+  { name = "Akuyaku", email = "babai.akuyaku@gmail.com" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = [
+  "pymongo==4.8.0",
+  "inflect==7.3.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/AKA-Per/mongudesu"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
