@@ -23,21 +23,28 @@ jobs:
         python-version: "3.x"
     - name: Get version from setup.py
       id: get_version
-      run: >-
+      run: |
           python3 -m pip install tomli
-          VERSION=$(python3 -c "import tomli; print(tomli.load(open('pyproject.toml','rb'))['project']['version'])")
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          
+          VERSION=$(python3 - <<'PYCODE'
+import sys
+if sys.version_info >= (3, 11):
+    import tomllib as tomli
+else:
+    import tomli
+with open("pyproject.toml", "rb") as f:
+    data = tomli.load(f)
+print(data["project"]["version"])
+PYCODE
+          )
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Check if version already exist
       id: check_version
       run: >-
-            if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
+            if git rev-parse "v${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
                 echo "exists=true" >> $GITHUB_OUTPUT
             else
                 echo "exists=false" >> $GITHUB_OUTPUT
             fi
-      env:
-        VERSION: ${{ env.VERSION }}
     - name: Upgrade pip, setuptools, wheel
       run: python3 -m pip install --upgrade pip setuptools wheel
 
@@ -91,7 +98,20 @@ jobs:
         persist-credentials: false
     - name: Get version from setup.py
       id: get_version
-      run: echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
+      run: |
+        python3 -m pip install tomli || true
+        VERSION=$(python3 - <<'PYCODE'
+import sys
+if sys.version_info >= (3, 11):
+    import tomllib as tomli
+else:
+    import tomli
+with open("pyproject.toml", "rb") as f:
+    data = tomli.load(f)
+print(data["project"]["version"])
+PYCODE
+        )
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Create tag
       run: |
         git config user.name anikSD
