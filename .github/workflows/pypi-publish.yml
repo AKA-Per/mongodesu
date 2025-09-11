@@ -26,15 +26,15 @@ jobs:
       run: |
           python3 -m pip install tomli
           VERSION=$(python3 - <<'PYCODE'
-import sys
-if sys.version_info >= (3, 11):
-    import tomllib as tomli
-else:
-    import tomli
-with open("pyproject.toml", "rb") as f:
-    data = tomli.load(f)
-print(data["project"]["version"])
-PYCODE
+          import sys
+          if sys.version_info >= (3, 11):
+              import tomllib as tomli
+          else:
+              import tomli
+          with open("pyproject.toml", "rb") as f:
+              data = tomli.load(f)
+          print(data["project"]["version"])
+          PYCODE
           )
           echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Check if version already exist
@@ -86,11 +86,14 @@ PYCODE
         path: dist/
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+    - name: Copy the exist variable
+      run: >-
+        echo "tagexists=${{needs.build.outputs.exists}}" >> $GITHUB_OUTPUT
 
   create-publish-tag:
     name: Create Tag and Release on GitHub
     needs: publish-to-pypi
-    if: needs.build.outputs.exists == 'false'
+    if: needs.publish-to-pypi.outputs.tagexists == 'false'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -101,15 +104,15 @@ PYCODE
       run: |
         python3 -m pip install tomli || true
         VERSION=$(python3 - <<'PYCODE'
-import sys
-if sys.version_info >= (3, 11):
-    import tomllib as tomli
-else:
-    import tomli
-with open("pyproject.toml", "rb") as f:
-    data = tomli.load(f)
-print(data["project"]["version"])
-PYCODE
+        import sys
+        if sys.version_info >= (3, 11):
+            import tomllib as tomli
+        else:
+            import tomli
+        with open("pyproject.toml", "rb") as f:
+            data = tomli.load(f)
+        print(data["project"]["version"])
+        PYCODE
         )
         echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Create tag
