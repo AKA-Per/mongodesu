@@ -17,10 +17,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bug in ```save()``` method when calling on existing record creates duplicate entry.
 
 
-## [2.0.0] - 2.25-09-07
+## [2.0.0] - 2025-09-07
 ### Fixed
 - Major Bug Fix - Serialization imports error fixed.
 
 ### Major Chamged
 - Imports for ```types```, ```Model```, changed for end user.
 - All imports are converted to module import with ```__init__```
+
+
+## [2.0.1] - 2025-09-11
+### Fixed
+- Default value set None for non required fields throws type error for all the fields. - Now default value set None works and store null.
+
+### Added
+- Added representation override to show the array representation info when printed.
+- Added string date parse for the ```DateField```.
+
+```python
+from mongodesu import Model
+from mongodesu.fields import DateField, StringField
+
+class User(Model):
+    title = StringField(required=True)
+    created_at = DateField(required=False, default=None)
+
+user = User(
+    title="John Doe",
+    created_at="2010-05-06" # This will parsed to date and save as date
+)
+user.save()
+
+```
+Supported format:
+- YYYY-MM-DD
+- DD-MM-YYYY
+- DD/MM/YYYY
+- YYYY-MM-DD HH:II:[SS]
+
+
+

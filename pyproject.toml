@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mongodesu"
-version = "2.0.0"
+version = "2.0.1"
 description = "A mongodb ODM dependant on pymongo with extensive model creation, validation, and relational model mechanism."
 readme = "README.md"
 authors = [

@@ -24,7 +24,8 @@ jobs:
     - name: Get version from setup.py
       id: get_version
       run: >-
-          VERSION=$(python3 setup.py --version)
+          python3 -m pip install tomli
+          VERSION=$(python3 -c "import tomli; print(tomli.load(open('pyproject.toml','rb'))['project']['version'])")
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           
     - name: Check if version already exist
