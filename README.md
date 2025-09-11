@@ -141,7 +141,7 @@ A field that stores a reference to another model.
 This will connect the db and all the operation will use this connection.
 
 ```python
-from mongodesu.mongolib import MongoAPI
+from mongodesu import MongoAPI
 mongo_api = MongoAPI(uri="mongodb://localhost:27017", database="mydatabase")
 ```
 
@@ -166,7 +166,8 @@ mongo.connect_one(uri="mongodb://localhost:27017/python-db-test")
 ### Defining a Model
 
 ```python
-from mongodesu.mongolib import StringField, BooleanField, NumberField
+from mongodesu import Model
+from mongodesu.fields import StringField, BooleanField, NumberField
 class User(Model):
     name = StringField(required=True)
     age = NumberField(required=True)
@@ -250,7 +251,8 @@ post.save()
 This will create two connection and each model will be associated with the one connection and every operation will be perform for that connection over the connected database.
 
 ```python
-from mongodesu.mongolib import MongoAPI, StringField, BooleanField, NumberField 
+from mongodesu import MongoAPI 
+from mongodesu.fields import StringField, BooleanField, NumberField 
 
 mongo1 = MongoAPI(host="localhost", port=27017, database="flaskdb")
 mongo2 = MongoAPI(uri="mongodb://localhost:27017/python-db-test")

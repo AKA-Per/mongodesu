@@ -119,8 +119,9 @@ class Model(MongoAPI, Serializable):
             # Cursor: The cursor object of the documents
             List[_DocumentType]: The list of model instances
         """
-        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
-        cursor = cls.collection.find(*args, **kwargs)
+        # cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        _current_self = cls()
+        cursor = _current_self.collection.find(*args, **kwargs)
         resulted_list: List[M] = []
         for doc in cursor:
             instance = cls(**doc)
@@ -138,8 +139,9 @@ class Model(MongoAPI, Serializable):
         Returns:
             Cursor: The cursor object of the document returned
         """
-        cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
-        data = cls.collection.find_one(filter, *args, **kwargs)
+        # cls.collection = getattr(cls, "collection", Collection(cls.db, cls.collection_name))
+        _current_self = cls()
+        data = _current_self.collection.find_one(filter, *args, **kwargs)
         if data is None:
             return data
         return cls(**data) # Return the class instance
@@ -394,6 +396,10 @@ class Model(MongoAPI, Serializable):
     
     def __str__(self):
         return super().__str__() + " " + str(self.to_dict())
+    
+    def __repr__(self):
+        super().__repr__()
+        return f"" + str(self.to_dict())
     
     
 
