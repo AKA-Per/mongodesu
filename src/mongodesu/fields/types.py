@@ -4,6 +4,7 @@ from mongodesu.fields.base import Field
 from typing import Any, Union, List, TYPE_CHECKING
 from datetime import date, datetime
 from bson import ObjectId
+from dateutil import parser
 
 if TYPE_CHECKING:
     from mongodesu.mongolib import Model
@@ -27,7 +28,7 @@ class StringField(Field[str]):
             value = self.default
         if self.required and not value:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
-        if not isinstance(value, str):
+        if not isinstance(value, str) and value is not None:
             raise ValueError(f"Field {field_name} -> String is expected.")
         if self.size and len(value) > self.size:
             raise ValueError(f"{field_name} size exceeded, max size {self.size}. Provided {len(value)}")
@@ -50,7 +51,7 @@ class NumberField(Field[Union[int, float]]):
             value = self.default
         if self.required and value is None:
             raise ValueError(f"Field {field_name} marked as required. But does not provide any value")
-        if ((not isinstance(value, int)) and (not isinstance(value, float))):
+        if ((not isinstance(value, int)) and (not isinstance(value, float)) and value is not None):
             raise ValueError(f"Field {field_name} Only number value accepted. integer and Float")
     
     
@@ -70,7 +71,7 @@ class ListField(Field[List[Any]]):
         
         if self.required and not value:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
-        if not isinstance(value, list):
+        if not isinstance(value, list) and value is not None:
             raise ValueError(f"{field_name} List value expected.")
         if self.item_type:
             for item in value:
@@ -93,11 +94,14 @@ class DateField(Field):
             # print(f"{field_name} value:= {self.default}")
             setattr(self, field_name, self.default)
             value = self.default # for subsequest error test
-        
+        # Special case if the value is passed as string of date then need to convert to the date
+        if isinstance(value, str):
+            value = parser.parse(value) # Will try to convert to date, and results in error if wrong format provided
         if self.required and value is None:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
         if not isinstance(value, (date, datetime)):
-            raise ValueError(f"{field_name} Date or datetime value expected.")
+            if value is not None:              
+                raise ValueError(f"{field_name} Date or datetime value expected.")
 
 
 
@@ -117,6 +121,8 @@ class BooleanField(Field[bool]):
         
         if self.required and value is None:
             raise ValueError(f"Field {field_name} marked as required and no value provided.")
+        # Special case -> None will consider as false
+        value = False if value is None else value
         if not isinstance(value, bool):
             raise ValueError(f"{field_name} Boolean value expected.")
 
