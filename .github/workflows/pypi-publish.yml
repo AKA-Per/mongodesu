@@ -87,6 +87,7 @@ jobs:
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
     - name: Copy the exist variable
+      id: copy_exist
       run: >-
         echo "tagexists=${{needs.build.outputs.exists}}" >> $GITHUB_OUTPUT
 

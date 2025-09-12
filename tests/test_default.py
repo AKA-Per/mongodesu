@@ -20,10 +20,10 @@ if __name__ == '__main__':
     #     {"name": "Hari", "title": "MR.", "age": 29, "created_at": "2025-01-05"}
     # ])
     
-    # user = User(
-    #     title="",
-    #     name="Anik"
-    # )
+    user = User(
+        title="",
+        name="Anik"
+    )
     # user.save()
     
     users = User.find({})
