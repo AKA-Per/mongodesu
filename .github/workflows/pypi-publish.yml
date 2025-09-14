@@ -77,6 +77,8 @@ jobs:
       url: https://pypi.org/p/mongodesu  # Replace <package-name> with your PyPI project name
     permissions:
       id-token: write
+    outputs:
+      tagexists: ${{ steps.copy_exist.outputs.tagexists }}
     steps:
     - uses: actions/checkout@v4
     - name: Download all the dists
